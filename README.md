@@ -1,66 +1,33 @@
-## Foundry
+## sol-pause
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+**This library has not been audited, tested, or even finished.**
 
-Foundry consists of:
+`sol-pause` makes it easy to implement a catch-all "panic button" for use during incident response.
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+You should use something like `sol-pause` if: 
+* you intend to have pausable contracts in production
+* you want to the option to remove the "pausability" of your contracts once you feel more confident
+* you're not sure how to configure "pausability" alongside the other roles/permissions your system has
+* you want a solution to all of this that doesn't add much complexity
 
-## Documentation
+### How Does it Work?
 
-https://book.getfoundry.sh/
+Pausable contracts inherit from `PausableContract` and may be paused (or unpaused) by the `PauseController`. `PausableContract` is a minimal wrapper around OpenZeppelin's `Pausable`, and works exactly the same way: when paused, any methods protected by the `whenNotPaused` modifier are locked, preventing access/state changes until unpaused.
 
-## Usage
+The `PauseController` is deployed as a singleton and configured with a list of pausable contracts. 
+* `PauseController.pauseAll()` iterates over this list and calls `pause()` on each
+* `PauseController.unpauseAll()` calls `unpause()` on each
 
-### Build
+### Why Do I Want This?
 
-```shell
-$ forge build
-```
+The main feature is in the access control used in `PauseController`. There are two levels of access:
+* Pausers can call `pauseAll()` - that's it.
+* The Owner can call `unpauseAll()`, as well as:
+    * add/remove Pausers
+    * add/remove pausable contracts
+    * (optional) upgrade the `PauseController`
+    * (optional) burn/revoke the `PauseController`, removing the ability to pause/unpause contracts
 
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+ This separation of roles/access is meant to facilitate incident response by making it safer to provide multiple people with the ability to quickly `pauseAll()`, while not giving them undue amounts of access. 
+ 
+ Pausers can only do one thing: pause the system. If their keys are lost or stolen, the Owner can always be used to remove their access and unpause the system if needed. Pausers are intended to be EOAs held by a handful of people (e.g. employees), whereas the Owner is intended to be held more securely - i.e. a multisig.
