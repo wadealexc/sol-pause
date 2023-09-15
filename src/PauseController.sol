@@ -70,6 +70,11 @@ contract PauseController is Ownable {
      * to be sure its primary function (call the `pause()` method on all targets)
      * is carried out.
      *
+     * Outside of simplification, another reason to ignore reverts here is so that
+     * PauseController can be used with OpenZeppelin Pausable, whose pause function
+     * will revert if the contract is already paused. In this case, this function
+     * prefers to continue attempting to pause the rest of the pausable contracts.
+     *
      * Unpausing is limited to onlyOwner to reduce the scope of the pauser role.
      * See the README for details.
      */
@@ -172,12 +177,16 @@ contract PauseController is Ownable {
 
     function _addPausable(IPausable _pausable) internal virtual {
         require(address(_pausable) != address(0));
-        pausables.add(address(_pausable));
-        emit PausableContractAdded(_pausable);
+        bool added = pausables.add(address(_pausable));
+        if (added) {
+            emit PausableContractAdded(_pausable);
+        }
     }
 
     function _removePausable(IPausable _pausable) internal virtual {
-        pausables.remove(address(_pausable));
-        emit PausableContractRemoved(_pausable);
+        bool removed = pausables.remove(address(_pausable));
+        if (removed) {
+            emit PausableContractRemoved(_pausable);
+        }
     }
 }

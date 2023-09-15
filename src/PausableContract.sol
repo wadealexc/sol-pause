@@ -2,22 +2,28 @@
 pragma solidity ^0.8.0;
 
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-import {IPausable} from "./IPausable.sol";
+import {PausableUpgradable} from "@openzeppelin-upgrades/contracts/utils/PausableUpgradable.sol";
+import {Ownable} from "@openzeppelin-upgrades/contracts/access/OwnableUpgradable.sol";
+import {Ownable} from "@openzeppelin-upgrades/contracts/proxy/utils/Initializable.sol";
 
-/**
- * @title Ideally this would be called Pausable, but then it couldn't
- * inherit from OpenZeppelin. TODO :(
- */
-abstract contract PausableContract is Pausable, IPausable {
+import {IPausableContract} from "./IPausableContract.sol";
+
+
+abstract contract Pausable is PausableUpgradable, OwnableUpgradable, IPausable {
 
     address public pauseController;
 
     event PauseControllerUpdated(address indexed newController);
 
     // TODO: Make initializable version for proxied contracts
-    constructor(address _pauseController) {
-        pauseController = _pauseController;
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize() external initializer {
+
     }
 
     modifier onlyPauseController {
@@ -25,15 +31,15 @@ abstract contract PausableContract is Pausable, IPausable {
         _;
     }
 
-    function pause() external onlyPauseController {
+    function pause() external virtual onlyPauseController {
         _pause();
     }
 
-    function unpause() external onlyPauseController {
+    function unpause() external virtual onlyPauseController {
         _unpause();
     }
 
-    function updatePauseController(address _newController) external onlyPauseController {
+    function updatePauseController(address _newController) external virtual onlyPauseController {
         pauseController = _newController;
         emit PauseControllerUpdated(_newController);
     }
