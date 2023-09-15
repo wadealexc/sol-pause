@@ -13,12 +13,15 @@ import {IPausable} from "./IPausable.sol";
  * methods in this contract, `pauseAll()` and `unpauseAll()` iterate over `pausables`
  * and call `pause()` or `unpause()` on each respectively.
  *
- * Only addresses in the `isPauser` mapping (or the contract owner) may call `pauseAll()`.
+ * @dev Only addresses in the `isPauser` mapping (or the contract owner) may call `pauseAll()`.
  * Only the owner may call `unpauseAll()`. The owner may also:
  * - update `isPauser` addresses (via `setPauser`)
  * - add/remove `pausable` contracts (via `addPausables` and `removePausables`)
  * - trigger a migration to a new `PauseController` contract (via `migrateAll`)
  * 
+ * NOTE: For simplicity, this contract is not meant to be behind a proxy - its primary 
+ * upgrade mechanism is via `migrateAll`.
+ *
  * See the README for more info!
  */
 contract PauseController is Ownable {
