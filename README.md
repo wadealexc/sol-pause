@@ -31,3 +31,7 @@ The main feature is in the access control used in `PauseController`. There are t
  This separation of roles/access is meant to facilitate incident response by making it safer to provide multiple people with the ability to quickly `pauseAll()`, while not giving them undue amounts of access. 
  
  Pausers can only do one thing: pause the system. If their keys are lost or stolen, the Owner can always be used to remove their access and unpause the system if needed. Pausers are intended to be EOAs held by a handful of people (e.g. employees), whereas the Owner is intended to be held more securely - i.e. a multisig.
+
+ ### On Pausability
+
+Pausability is expected to be used in tandem with other ownable-type controls, including proxy upgradability Pausability is a tool that can be used to support both complex systems and contract upgrades.

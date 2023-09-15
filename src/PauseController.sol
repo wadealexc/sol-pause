@@ -16,14 +16,10 @@ import {IPausable} from "./IPausable.sol";
  * Only addresses in the `isPauser` mapping (or the contract owner) may call `pauseAll()`.
  * Only the owner may call `unpauseAll()`. The owner may also:
  * - update `isPauser` addresses (via `setPauser`)
- * - add/remove `pausable` contracts (via `addPausable` and `removePausable`)
- * - trigger a migration to a new `PauseController` contract (via `migratePauseController`)
- *
- * The point of these permissions is to limit `isPauser`, as these addresses are expected to be
- * EOAs used for quick access during incident response - whereas the `owner` is expected to be
- * a multisig or similar. 
+ * - add/remove `pausable` contracts (via `addPausables` and `removePausables`)
+ * - trigger a migration to a new `PauseController` contract (via `migrateAll`)
  * 
- * See the README for details.
+ * See the README for more info!
  */
 contract PauseController is Ownable {
 
@@ -45,17 +41,13 @@ contract PauseController is Ownable {
     event PausableContractAdded(IPausable indexed p);
     event PausableContractRemoved(IPausable indexed p);
 
-    // TODO - probably need to add pausable contracts in a second function
-    constructor(address[] memory _pausers, IPausable[] memory _pausables) {
+    constructor(address[] memory _pausers) {
         for(uint i = 0; i < _pausers.length; i++) {
             _setPauser(_pausers[i], true);
         }
-
-        for(uint i = 0; i < _pausables.length; i++) {
-            _addPausable(_pausables[i]);
-        }
     }
     
+    /// @dev The owner is a de-facto pauser and may also call `pauseAll()`
     modifier onlyPauser {
         require(isPauser[msg.sender] || msg.sender == owner());
         _;
@@ -114,7 +106,7 @@ contract PauseController is Ownable {
     }
 
     /**
-     * @notice `migratePauseController(address)` is used to change the PauseController
+     * @notice `migrateAll(address)` is used to change the PauseController
      * address in all pausable contracts. This can be used either to upgrade to a new
      * PauseController, or to "burn" the ability to pause. Only the owner may call this
      * method.
@@ -124,10 +116,10 @@ contract PauseController is Ownable {
      * Unlike `pauseAll()` and `unpauseAll()`, this method will FAIL if any calls revert.
      * This is to help ensure a migration is performed across all contracts simultaneously.
      * 
-     * This method also does NOT check that `_newController` is a valid address. This is to
-     * enable updating to address(0) to "burn" pausability.
+     * This method also does NOT check that `_newController` is a valid address/contract. 
+     * This is to support updating to address(0) to "burn" pausability.
      */
-    function migratePauseController(address _newController) external virtual onlyOwner {
+    function migrateAll(address _newController) external virtual onlyOwner {
         uint length = pausables.length();
 
         for (uint i = 0; i < length;) {
@@ -145,19 +137,34 @@ contract PauseController is Ownable {
     }
 
     /**
-     * @dev Allows the owner to add a pausable contract. Future calls to
+     * @notice Allows the owner to add pausable contracts. Future calls to
      * `pauseAll()` and `unpauseAll()` will include a call to the added contract.
-     * 
-     * Be sure you understand how much gas `pauseAll()` requires before adding
-     * a new contract!
+     * @dev This method will ignore entries that are already in the set of pausables.
+     * When adding pausable contracts, remember to:
+     * - Check the gas cost required to call `pauseAll` and `unpauseAll`
+     * - Check that pausable contracts are initialized and will pause/unpause when called
+     *   by this contract
      */
-    function addPausable(IPausable _pausable) external virtual onlyOwner {
-        _addPausable(_pausable);
+    function addPausables(IPausable[] calldata _pausables) external virtual onlyOwner {
+        uint length = _pausables.length;
+        for (uint i = 0; i < length;) {
+            _addPausable(_pausables[i]);
+
+            unchecked { i++; }
+        }
     }
 
-    /// @dev Allows the owner to remove a pausable contract
-    function removePausable(IPausable _pausable) external virtual onlyOwner {
-        _removePausable(_pausable);
+    /**
+     * @notice Allows the owner to remove pausable contracts
+     * @dev This method will ignore entries that aren't in the set
+     */
+    function removePausables(IPausable[] calldata _pausables) external virtual onlyOwner {
+        uint length = _pausables.length;
+        for (uint i = 0; i < length;) {
+            _removePausable(_pausables[i]);
+
+            unchecked { i++; }
+        }
     }
 
     //// External: View
